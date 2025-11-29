@@ -107,7 +107,7 @@ export default {
     const html = `<!DOCTYPE html>
   <html lang="zh-CN">
   <head>
-  <link rel="icon" href="https://raw.githubusercontent.com/alienwaregf/personal-use/main/image/Favicon/GF.svg" type="image/svg+xml">
+  <link rel="icon" href="https://www.cloudflare.com/favicon.ico" type="image/x-icon">
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Cloudflare IP 收集器</title>
@@ -576,6 +576,9 @@ export default {
               margin-top: 20px;
               display: grid;
               gap: 12px;
+              max-height: 380px; /* 新增: 限制高度，大约6行的高度 */
+              overflow-y: auto;  /* 新增: 增加纵向滚动条 */
+              padding-right: 5px; /* 新增: 避免滚动条遮挡 */
           }
 
           .custom-source-item {
