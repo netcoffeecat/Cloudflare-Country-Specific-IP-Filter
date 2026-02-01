@@ -97,6 +97,7 @@ async function handleApiRequest(url) {
 async function handleRawRequest(regionStr, format, limit = 0, requestUrl = null) {
     const decoded = decodeURIComponent(regionStr);
     
+    // 1. 解析目标地区
     const targetRegions = decoded.split(/[,-]/)
                                  .map(r => r.trim().toUpperCase())
                                  .filter(r => r);
@@ -111,44 +112,50 @@ async function handleRawRequest(regionStr, format, limit = 0, requestUrl = null)
         const response = await fetch("https://zip.cm.edu.kg/all.txt");
         let text = await response.text();
         text = text.replace(/^\uFEFF/, '');
-        
         const lines = text.split('\n');
-        const regionCounters = {}; 
-        const regionLimitCounters = {};
-        let processed = [];
 
+        let matches = [];
+        for (const line of lines) {
+            if (!line.includes('#')) continue;
+            const parts = line.split('#');
+            const code = parts[1] ? parts[1].trim().toUpperCase() : '';
+            
+            if (targetRegions.includes(code)) {
+                matches.push({ line, code, ipPort: parts[0].trim() });
+            }
+        }
+
+        let selectedItems = matches;
+        if (limit > 0 && matches.length > limit) {
+            selectedItems = [];
+            for (let i = 0; i < limit; i++) {
+                const randomIndex = Math.floor(Math.random() * matches.length);
+                selectedItems.push(matches[randomIndex]);
+            }
+        }
+
+        const processed = [];
         const isCFStyle = format.startsWith('cf') || format === 'comma';
         const isShortName = format.includes('short');
         const isLineSeparated = format.includes('line');
+        const regionCounters = {}; 
 
-        for (const line of lines) {
-            if (!line.includes('#')) continue;
-            
-            const parts = line.split('#');
-            const ipPort = parts[0].trim();
-            const code = parts[1] ? parts[1].trim().toUpperCase() : '';
+        for (const item of selectedItems) {
+            const { line, code, ipPort } = item;
 
-            if (targetRegions.includes(code)) {
-                if (limit > 0) {
-                    const currentCount = (regionLimitCounters[code] || 0) + 1;
-                    if (currentCount > limit) continue;
-                    regionLimitCounters[code] = currentCount;
-                }
-
-                if (isCFStyle) {
-                    regionCounters[code] = (regionCounters[code] || 0) + 1;
-                    const flag = getFlagEmoji(code);
-                    const name = REGION_MAP[code] || code;
-                    const countStr = toSuperScript(regionCounters[code]);
-                    const port = ipPort.split(':')[1] || ''; 
-                    
-                    let nodeName = `${flag} ${name}${countStr}`;
-                    if (!isShortName) nodeName += `-${port}`;
-                    
-                    processed.push(`${ipPort}#${nodeName}`);
-                } else {
-                    processed.push(ipPort);
-                }
+            if (isCFStyle) {
+                regionCounters[code] = (regionCounters[code] || 0) + 1;
+                const flag = getFlagEmoji(code);
+                const name = REGION_MAP[code] || code;
+                const countStr = toSuperScript(regionCounters[code]);
+                const port = ipPort.split(':')[1] || ''; 
+                
+                let nodeName = `${flag} ${name}${countStr}`;
+                if (!isShortName) nodeName += `-${port}`;
+                
+                processed.push(`${ipPort}#${nodeName}`);
+            } else {
+                processed.push(ipPort);
             }
         }
 
@@ -164,7 +171,7 @@ async function handleRawRequest(regionStr, format, limit = 0, requestUrl = null)
                 'content-type': 'text/plain; charset=UTF-8',
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET,HEAD,POST,OPTIONS',
-                'Access-Control-Max-Age': '86400',
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
             } 
         });
 
